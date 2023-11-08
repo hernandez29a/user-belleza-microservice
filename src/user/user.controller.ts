@@ -38,4 +38,11 @@ export class UserController {
   remove(@Payload() id: string) {
     return this.userService.remove(id);
   }
+
+  @MessagePattern(UserMSG.GET_EMAIL)
+  getEmail(@Payload() data: { email: string; password: string }) {
+    //console.log(data);
+    //return 'dentro del login';
+    return this.userService.getEmail(data);
+  }
 }
