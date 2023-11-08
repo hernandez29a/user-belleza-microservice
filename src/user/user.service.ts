@@ -10,6 +10,7 @@ import { Model, isValidObjectId } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcrypt';
 import { PaginationDto } from 'src/common/dto/paginationDto';
+import { UnauthorizedException } from '@nestjs/common';
 
 @Injectable()
 export class UserService {
@@ -24,18 +25,17 @@ export class UserService {
     //restoData.name = restoData.name.toLocaleLowerCase();
     //restoData.lastname = restoData.lastname.toLocaleLowerCase();
     restoData.status = true;
-
     try {
-      const user = await this.userModel.create({
+      return await this.userModel.create({
         ...restoData,
         password: bcrypt.hashSync(password, 10),
       });
 
       // ? retornar el jwt de acceso
-      return {
+      /*return {
         user,
         //token: this.getJwtToken({ id: user.id }),
-      };
+      };*/
     } catch (error) {
       this.handleDBException(error);
       //this.errorHandler.errorHandleException(error);
@@ -53,7 +53,7 @@ export class UserService {
         .find()
         .limit(limit)
         .skip(pagination)
-        .select('-__v')
+        .select('-password -__v')
         .or([{ name: regex }, { email: regex }]),
       //.where({ name: termino.toLocaleLowerCase().trim() }),
     ]);
@@ -73,7 +73,7 @@ export class UserService {
     let user: User;
 
     if (!user && isValidObjectId(id)) {
-      user = await this.userModel.findById(id);
+      user = await this.userModel.findById(id).select('-password -__v');
     }
 
     if (!user) {
@@ -104,76 +104,40 @@ export class UserService {
     }
     const user = { ...restoData };
     try {
-      return await this.userModel.findByIdAndUpdate(id, user, { new: true });
+      return await this.userModel
+        .findByIdAndUpdate(id, user, { new: true })
+        .select('-password -__v');
     } catch (error) {
       this.handleDBException(error);
     }
   }
-
-  // encriptar contraseña
-  /*async hashPassword(password: string): Promise<string> {
-    const salt = await bcrypt.genSalt(10);
-    const hash = await bcrypt.hash(password, salt);
-    return hash;
-  }
-
-  async update(id: string, updateUserDto: UpdateUserDto) {
-    const { ...restoData } = updateUserDto;
-    console.log(updateUserDto.password);
-
-    if (updateUserDto.password) {
-      const hash = await this.hashPassword(restoData.password);
-      restoData.password = hash;
-    }
-    const user = { ...restoData };
-    return updateUserDto;
-  }*/
-
-  /*async update(id: string, updateUserDto: UpdateUserDto) {
-    const { ...restoData } = updateUserDto;
-    if (updateUserDto.password !== undefined) {
-      const hash = await this.hashPassword(updateUserDto.password);
-      restoData.password = hash;
-    }
-    const user = { ...restoData };
-    try {
-      console.log(restoData.password);
-      return 'cambios realizados';
-      //return await this.userModel.findByIdAndUpdate(id, user, { new: true });
-    } catch (error) {
-      this.handleDBException(error);
-    }
-  }*/
-
-  /*async update(id: string, updateUserDto: UpdateUserDto) {
-    const { ...restoData } = updateUserDto;
-    if (updateUserDto.password) {
-      const hash = await this.hashPassword(restoData.password);
-      restoData.password = hash;
-    }
-    const user = { ...restoData };
-    try {
-      return await this.userModel.findByIdAndUpdate(id, user, { new: true });
-    } catch (error) {
-      this.handleDBException(error);
-    }
-  }*/
 
   async remove(id: string) {
     let user: User;
 
     try {
-      user = await this.userModel.findByIdAndUpdate(
-        id,
-        { status: false },
-        {
-          new: true,
-        },
-      );
+      user = await this.userModel
+        .findByIdAndUpdate(
+          id,
+          { status: false },
+          {
+            new: true,
+          },
+        )
+        .select('-password -__v');
       return user;
     } catch (error) {
       this.handleDBException(error);
     }
+  }
+
+  //? por generar para el login
+  async getEmail(data: { email: string; password: string }) {
+    //const email = data.email;
+    //const password = data.password;
+    return await this.userModel.findOne({
+      email: data.email,
+    });
   }
 
   private handleDBException(error: any) {
