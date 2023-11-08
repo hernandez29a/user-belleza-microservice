@@ -59,7 +59,7 @@ export class User extends Document {
 export const UserSchema = SchemaFactory.createForClass(User);
 UserSchema.method('toJSON', function () {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { __v, password, ...user } = this.toObject();
+  const { __v, ...user } = this.toObject();
 
   //user.uid = _id;
   return user;
